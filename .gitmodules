@@ -1,0 +1,3 @@
+[submodule "moar-zeta-cpp-openmp"]
+	path = moar-zeta-cpp-openmp
+	url = https://github.com/adam-zlatniczki/moar-zeta-cpp-openmp
