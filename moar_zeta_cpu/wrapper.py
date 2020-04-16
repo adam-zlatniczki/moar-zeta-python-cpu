@@ -15,7 +15,7 @@ else:
 if libc is None:
     raise Exception("Compiled shared library not found! Make sure you installed the package without errors!")
 
-libc.hmp_value_py.argtypes = [POINTER(c_double), POINTER(c_double), c_uint, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double), c_uint, c_uint ]
+libc.hmp_value_py.argtypes = [POINTER(c_double), POINTER(c_double), c_uint, c_uint, c_uint, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double), c_uint, c_uint ]
 libc.hmp_value_py.restype = c_void_p
 
 
@@ -24,9 +24,9 @@ def hmp(x, y, n_tests=50, k=None):
     Calculates the test statistic (average zeta) and its corresponding (harmonic mean) p-value in both directions between X and Y.
 
     :param x: The X sample points
-    :type x: Iterable
+    :type x: numpy array
     :param y: The Y sample points
-    :type y: Iterable
+    :type y: numpy array
     :param n_tests: The number of tests to do in the multiple testing procedure (50 by default)
     :type n_tests: int
     :param k: The number of neighbors to use in the kNN part ( ceil(sqrt(sample size)) by default )
@@ -34,13 +34,22 @@ def hmp(x, y, n_tests=50, k=None):
     :return: HMP X, avg. zeta X, HMP Y, avg. zeta Y
     :rtype: float, float, float, float
     """
-    x_arr = (c_double * len(x))()
-    y_arr = (c_double * len(x))()
 
-    for i in range(len(x)):
-        x_arr[i] = c_double(x[i])
-        y_arr[i] = c_double(y[i])
+    if x.shape[0] != y.shape[0]:
+        raise "X and Y sample doesn't have the same number of points!"
 
+    x_arr = (c_double * x.size)()
+    y_arr = (c_double * y.size)()
+
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            x_arr[i*x.shape[1] + j] = c_double(x[i,j])
+
+        for j in range(y.shape[1]):
+            y_arr[i*y.shape[1] + j] = c_double(y[i,j])
+
+    d_x = c_uint(x.shape[1])
+    d_y = c_uint(y.shape[1])
     n = c_uint(len(x))
 
     n_tests = c_uint(n_tests)
@@ -57,6 +66,8 @@ def hmp(x, y, n_tests=50, k=None):
     libc.hmp_value_py(
         cast(x_arr, POINTER(c_double)),
         cast(y_arr, POINTER(c_double)),
+        d_x,
+        d_y,
         n,
         byref(hmp_x),
         byref(avg_zeta_x),
